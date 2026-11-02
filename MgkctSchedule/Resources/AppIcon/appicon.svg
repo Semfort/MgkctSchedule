@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="topGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff4d4d"/>
+      <stop offset="100%" stop-color="#d90000"/>
+    </linearGradient>
+    <linearGradient id="leftGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4dff4d"/>
+      <stop offset="100%" stop-color="#00b300"/>
+    </linearGradient>
+    <linearGradient id="rightGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4dccff"/>
+      <stop offset="100%" stop-color="#0077cc"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(100,100) scale(0.75) translate(-100,-85)">
+
+    <polygon points="100,10 170,50 100,90 30,50" fill="url(#topGrad)" stroke="#1a1a1a" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="30,50 100,90 100,160 30,120" fill="url(#leftGrad)" stroke="#1a1a1a" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="100,90 170,50 170,120 100,160" fill="url(#rightGrad)" stroke="#1a1a1a" stroke-width="2.5" stroke-linejoin="round"/>
+
+    <g transform="matrix(0.866 0.5 -0.866 0.5 100 50)"
+       stroke="#ffffff" fill="none"
+       stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-24,-28 L-24,28 M-24,0 L24,-28 M-24,0 L24,28"/>
+    </g>
+
+    <g transform="matrix(0.8 0.46 0 0.9 65 108)"
+       stroke="#ffffff" fill="none"
+       stroke-width="12" stroke-linecap="square" stroke-linejoin="miter">
+      <path d="M-24,-24 L-24,24 L24,24 L24,-24 M24,24 L24,44"/>
+    </g>
+
+    <g transform="matrix(0.8 -0.46 0 0.9 135 108)"
+       stroke="#ffffff" fill="none"
+       stroke-width="12" stroke-linecap="square" stroke-linejoin="miter">
+      <path d="M-24,-24 L24,-24 M0,-24 L0,28"/>
+    </g>
+
+  </g>
+</svg>

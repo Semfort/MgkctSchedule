@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_bg">#FFFFFF</color>
+    <color name="widget_text">#14171C</color>
+    <color name="widget_sub">#5B6472</color>
+    <color name="widget_accent">#2F6BFF</color>
+    <color name="widget_current_bg">#DCE8FF</color>
+    <string name="widget_description">Текущая и ближайшие пары вашей группы</string>
+</resources>

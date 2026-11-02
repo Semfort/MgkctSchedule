@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:MgkctSchedule.ViewModels"
+             x:Class="MgkctSchedule.MainPage"
+             x:DataType="vm:MainViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light=#F2F4F8, Dark=#0E1014}">
+
+    <Grid>
+        <!-- ======== основной экран ======== -->
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
+
+            <!-- заголовок -->
+            <Grid Grid.Row="0" Padding="16,14,16,2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                <VerticalStackLayout VerticalOptions="Center">
+                    <Label Text="{Binding DateTitle}" FontSize="22" FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
+                    <Label Text="{Binding SubTitle}" FontSize="12"
+                           TextColor="{AppThemeBinding Light=#5B6472, Dark=#9AA3B2}"/>
+                </VerticalStackLayout>
+                <Button Grid.Column="1" Text="Сегодня" Command="{Binding TodayCommand}"
+                        HeightRequest="40" Padding="14,0" CornerRadius="20" FontSize="13"
+                        BackgroundColor="{AppThemeBinding Light=#E6EAF2, Dark=#1B1E25}"
+                        TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
+                <Button Grid.Column="2" Text="📅" Clicked="OnCalendarClicked"
+                        WidthRequest="44" HeightRequest="40" Padding="0" CornerRadius="20" FontSize="18"
+                        BackgroundColor="{AppThemeBinding Light=#E6EAF2, Dark=#1B1E25}"/>
+                <Button Grid.Column="3" Text="⚙" Clicked="OnSettingsClicked"
+                        WidthRequest="44" HeightRequest="40" Padding="0" CornerRadius="20" FontSize="18"
+                        BackgroundColor="{AppThemeBinding Light=#E6EAF2, Dark=#1B1E25}"
+                        TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
+            </Grid>
+
+            <!-- полоса дней -->
+            <Grid Grid.Row="2" Padding="8,10,8,2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="2">
+                <Button Text="‹" Command="{Binding PrevWeekCommand}" WidthRequest="32" HeightRequest="60"
+                        Padding="0" FontSize="26" BackgroundColor="Transparent"
+                        TextColor="{AppThemeBinding Light=#5B6472, Dark=#9AA3B2}"/>
+                <CollectionView Grid.Column="1" ItemsSource="{Binding WeekDays}" SelectionMode="None"
+                                HeightRequest="62">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="6" HorizontalItemSpacing="4"/>
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DayChip">
+                            <Border StrokeThickness="0" Padding="0,8" HeightRequest="58"
+                                    BackgroundColor="{Binding Background}" Opacity="{Binding ChipOpacity}">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="14"/></Border.StrokeShape>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnDayTapped"/>
+                                </Border.GestureRecognizers>
+                                <VerticalStackLayout Spacing="1" HorizontalOptions="Center">
+                                    <Label Text="{Binding DayName}" FontSize="12" HorizontalOptions="Center"
+                                           TextColor="{Binding TextColor}"/>
+                                    <Label Text="{Binding DayNumber}" FontSize="18" FontAttributes="Bold"
+                                           HorizontalOptions="Center" TextColor="{Binding TextColor}"/>
+                                    <BoxView WidthRequest="5" HeightRequest="5" CornerRadius="3"
+                                             HorizontalOptions="Center" Color="{Binding DotColor}"
+                                             IsVisible="{Binding IsToday}"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+                <Button Grid.Column="2" Text="›" Command="{Binding NextWeekCommand}" WidthRequest="32"
+                        HeightRequest="60" Padding="0" FontSize="26" BackgroundColor="Transparent"
+                        TextColor="{AppThemeBinding Light=#5B6472, Dark=#9AA3B2}"/>
+            </Grid>
+
+            <!-- что сейчас -->
+            <Border Grid.Row="3" IsVisible="{Binding HasStatus}" Margin="16,8,16,0" Padding="14,10"
+                    StrokeThickness="0"
+                    BackgroundColor="{AppThemeBinding Light=#DCE8FF, Dark=#17325C}">
+                <Border.StrokeShape><RoundRectangle CornerRadius="14"/></Border.StrokeShape>
+                <Label Text="{Binding StatusText}" FontSize="14" FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light=#1B3F99, Dark=#CFE0FF}"/>
+            </Border>
+
+            <!-- ошибка сети -->
+            <Label Grid.Row="4" Text="{Binding ErrorText}" IsVisible="{Binding HasError}"
+                   Margin="16,6,16,0" FontSize="12"
+                   TextColor="{AppThemeBinding Light=#B45309, Dark=#FBBF24}"/>
+
+            <!-- список пар -->
+            <Grid Grid.Row="5" Margin="0,6,0,0">
+                <Grid.GestureRecognizers>
+                    <SwipeGestureRecognizer Direction="Left" Swiped="OnSwipeLeft"/>
+                    <SwipeGestureRecognizer Direction="Right" Swiped="OnSwipeRight"/>
+                </Grid.GestureRecognizers>
+                <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
+                    <CollectionView ItemsSource="{Binding Items}" SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <Label Text="{Binding EmptyText}" HorizontalTextAlignment="Center"
+                                   VerticalOptions="Center" Margin="32,60" FontSize="16"
+                                   TextColor="{AppThemeBinding Light=#5B6472, Dark=#9AA3B2}"/>
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PairItem">
+                                <Grid ColumnDefinitions="54,*" ColumnSpacing="10" Margin="16,5">
+                                    <!-- время -->
+                                    <VerticalStackLayout Grid.Column="0" HorizontalOptions="Center"
+                                                         VerticalOptions="Start" Padding="0,10,0,0">
+                                        <Label Text="{Binding StartText}" FontSize="15" FontAttributes="Bold"
+                                               HorizontalOptions="Center" TextColor="{Binding TitleColor}"/>
+                                        <Label Text="{Binding EndText}" FontSize="12"
+                                               HorizontalOptions="Center" TextColor="{Binding SubColor}"/>
+                                        <Label Text="{Binding NumberText}" FontSize="11" Margin="0,4,0,0"
+                                               HorizontalOptions="Center" TextColor="{Binding SubColor}"/>
+                                    </VerticalStackLayout>
+
+                                    <!-- окно -->
+                                    <Label Grid.Column="1" Text="Окно" IsVisible="{Binding IsWindow}"
+                                           VerticalOptions="Center" Padding="4,14" FontSize="14"
+                                           TextColor="{Binding SubColor}" Opacity="0.7"/>
+
+                                    <!-- карточка пары -->
+                                    <Border Grid.Column="1" IsVisible="{Binding IsLesson}" StrokeThickness="0"
+                                            BackgroundColor="{Binding CardColor}" Opacity="{Binding CardOpacity}">
+                                        <Border.StrokeShape><RoundRectangle CornerRadius="16"/></Border.StrokeShape>
+                                        <Grid ColumnDefinitions="5,*">
+                                            <BoxView Color="{Binding AccentColor}"/>
+                                            <VerticalStackLayout Grid.Column="1" Padding="14,12" Spacing="10">
+                                                <Label Text="{Binding BadgeText}" IsVisible="{Binding HasBadge}"
+                                                       FontSize="11" FontAttributes="Bold"
+                                                       TextColor="{Binding AccentColor}"/>
+                                                <VerticalStackLayout Spacing="12"
+                                                                     BindableLayout.ItemsSource="{Binding Entries}">
+                                                    <BindableLayout.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:EntryVm">
+                                                            <VerticalStackLayout Spacing="3">
+                                                                <Label Text="{Binding Subject}" FontSize="16"
+                                                                       FontAttributes="Bold"
+                                                                       TextColor="{Binding TitleColor}"/>
+                                                                <Label Text="{Binding TypeLine}" FontSize="13"
+                                                                       TextColor="{Binding SubColor}"/>
+                                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                                    <Label Text="{Binding Teacher}" FontSize="13"
+                                                                           VerticalOptions="Center"
+                                                                           IsVisible="{Binding HasTeacher}"
+                                                                           TextColor="{Binding SubColor}"/>
+                                                                    <Border Grid.Column="1" StrokeThickness="0"
+                                                                            Padding="10,4"
+                                                                            IsVisible="{Binding HasRoom}"
+                                                                            BackgroundColor="{Binding RoomChipColor}">
+                                                                        <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                                                                        <Label Text="{Binding Room, StringFormat='ауд. {0}'}"
+                                                                               FontSize="13" FontAttributes="Bold"
+                                                                               TextColor="{Binding TitleColor}"/>
+                                                                    </Border>
+                                                                </Grid>
+                                                            </VerticalStackLayout>
+                                                        </DataTemplate>
+                                                    </BindableLayout.ItemTemplate>
+                                                </VerticalStackLayout>
+                                                <ProgressBar Progress="{Binding Progress}" IsVisible="{Binding IsCurrent}"
+                                                             ProgressColor="{Binding AccentColor}"/>
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </RefreshView>
+            </Grid>
+        </Grid>
+
+        <!-- ======== календарик ======== -->
+        <Grid x:Name="CalendarOverlay" IsVisible="False" BackgroundColor="#99000000">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnCalendarClose"/>
+            </Grid.GestureRecognizers>
+            <Border VerticalOptions="Center" Margin="20,0" Padding="14" StrokeThickness="0"
+                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1B1E25}">
+                <Border.StrokeShape><RoundRectangle CornerRadius="22"/></Border.StrokeShape>
+                <!-- гасим тап, чтобы он не закрывал календарь -->
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnCalendarSwallowTap"/>
+                </Border.GestureRecognizers>
+                <VerticalStackLayout Spacing="8">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Button Text="‹" Clicked="OnCalPrev" WidthRequest="44" HeightRequest="44" Padding="0"
+                                FontSize="24" BackgroundColor="Transparent"
+                                TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
+                        <Label x:Name="CalendarTitle" Grid.Column="1" HorizontalTextAlignment="Center"
+                               VerticalOptions="Center" FontSize="17" FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
+                        <Button Grid.Column="2" Text="›" Clicked="OnCalNext" WidthRequest="44" HeightRequest="44"
+                                Padding="0" FontSize="24" BackgroundColor="Transparent"
+                                TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
+                    </Grid>
+                    <Grid x:Name="CalendarWeekdays" ColumnDefinitions="*,*,*,*,*,*,*"/>
+                    <Grid x:Name="CalendarGrid" ColumnDefinitions="*,*,*,*,*,*,*"
+                          RowDefinitions="44,44,44,44,44,44" RowSpacing="2"/>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,6,0,0">
+                        <Button Text="Сегодня" Clicked="OnCalToday" CornerRadius="14"
+                                BackgroundColor="{AppThemeBinding Light=#E6EAF2, Dark=#2A2F3A}"
+                                TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
+                        <Button Grid.Column="1" Text="Закрыть" Clicked="OnCalendarClose" CornerRadius="14"
+                                BackgroundColor="{AppThemeBinding Light=#E6EAF2, Dark=#2A2F3A}"
+                                TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentPage>
