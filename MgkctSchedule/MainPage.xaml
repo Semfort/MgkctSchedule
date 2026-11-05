@@ -177,7 +177,7 @@
                                                                                 <DataTemplate x:DataType="vm:TeacherLink">
                                                                                     <Label Text="{Binding Name}" FontSize="13" Margin="0,0,10,0"
                                                                                            TextDecorations="Underline"
-                                                                                           TextColor="{AppThemeBinding Light=#2F6BFF, Dark=#6B96FF}">
+                                                                                           TextColor="{AppThemeBinding Light=#2c317d, Dark=#2c317d}">
                                                                                         <Label.GestureRecognizers>
                                                                                             <TapGestureRecognizer Tapped="OnTeacherTapped"/>
                                                                                         </Label.GestureRecognizers>
