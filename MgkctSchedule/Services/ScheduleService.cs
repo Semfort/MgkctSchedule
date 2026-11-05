@@ -33,6 +33,18 @@ public class ScheduleService
     // у каждой группы свой файл кэша
     string CachePath => Path.Combine(FileSystem.AppDataDirectory, $"schedule_{Group.Replace("*", "s")}.json");
 
+    /// <summary>
+    /// Расписание преподавателя на неделю(и), опубликованные на сайте. Нигде не сохраняется:
+    /// живёт в памяти, пока открыт экран преподавателя.
+    /// </summary>
+    public static async Task<List<DaySchedule>> FetchTeacherAsync(string teacher, CancellationToken ct = default)
+    {
+        var url = "https://mgkct.minskedu.gov.by/personnel/for-teachers/weekly-timetable?teacher="
+                  + Uri.EscapeDataString(teacher).Replace("%20", "+");
+        var html = await Http.GetStringAsync(url, ct);
+        return ScheduleParser.ParseTeacher(html, teacher);
+    }
+
     /// <summary>Скачивает страницу, вливает новые дни в кэш и сохраняет его.</summary>
     public async Task<ScheduleCache> RefreshAsync(CancellationToken ct = default)
     {

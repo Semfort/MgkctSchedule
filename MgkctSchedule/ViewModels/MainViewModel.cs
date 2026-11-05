@@ -16,6 +16,14 @@ public class MainViewModel : ObservableBase
     string _group = AppSettings.Group;
     readonly Dictionary<DateTime, DaySchedule> _days = new();
 
+    // режим преподавателя: расписание только в памяти, при выходе выбрасывается
+    readonly Dictionary<DateTime, DaySchedule> _teacherDays = new();
+    string? _teacher;
+    bool _teacherLoading;
+    string _savedError = "";
+
+    Dictionary<DateTime, DaySchedule> Active => _teacher != null ? _teacherDays : _days;
+
     DateTime _selected = NormalizeDate(DateTime.Today);
     DateTime _fetchedAt;
     string _error = "";
@@ -57,6 +65,8 @@ public class MainViewModel : ObservableBase
         get
         {
             var monday = MondayOf(_selected);
+            if (_teacher != null)
+                return $"{_teacher} · {monday:dd.MM}–{monday.AddDays(5):dd.MM}";
             var upd = _fetchedAt == default ? "ещё не загружено" : $"обновлено {_fetchedAt:dd.MM HH:mm}";
             return $"Группа {_group} · {monday:dd.MM}–{monday.AddDays(5):dd.MM} · {upd}";
         }
@@ -80,11 +90,18 @@ public class MainViewModel : ObservableBase
         }
         _shortBells = AppSettings.ShortBells;
         _subgroupIndex = AppSettings.Subgroup;
+        Raise(nameof(SubgroupLabel));
         BuildItems();
         UpdateStates();
     }
 
-    public bool HasData(DateTime date) => _days.ContainsKey(date.Date);
+    public string SubgroupLabel => _subgroupIndex switch { 1 => "Первая", 2 => "Вторая", _ => "Все" };
+
+    public bool IsTeacherMode => _teacher != null;
+    public bool IsGroupMode => _teacher == null;
+    public string BackText => $"‹ К группе {_group}";
+
+    public bool HasData(DateTime date) => Active.ContainsKey(date.Date);
 
     // ---------- загрузка ----------
 
@@ -99,7 +116,9 @@ public class MainViewModel : ObservableBase
 
     async Task SwitchGroupAsync()
     {
+        ExitTeacherMode();
         _group = AppSettings.Group;
+        Raise(nameof(BackText));
         _service = new ScheduleService(_group);
         _days.Clear();
         _error = "";
@@ -113,6 +132,7 @@ public class MainViewModel : ObservableBase
 
     public async Task RefreshAsync()
     {
+        if (_teacher != null) { await LoadTeacherAsync(); return; }
         IsRefreshing = true;
         var svc = _service;
         var group = _group;
@@ -138,6 +158,74 @@ public class MainViewModel : ObservableBase
             IsRefreshing = false;
         }
         Raise(nameof(ErrorText)); Raise(nameof(HasError)); Raise(nameof(SubTitle));
+        BuildWeek();
+        BuildItems();
+        UpdateStates();
+    }
+
+    // ---------- режим преподавателя ----------
+
+    public async Task OpenTeacherAsync(string name)
+    {
+        if (_teacher == name) return;
+        if (_teacher == null) _savedError = _error;   // ошибка группы вернётся при выходе
+        _teacher = name;
+        _teacherDays.Clear();
+        _teacherLoading = true;
+        _error = "";
+        RaiseModeChanged();
+        await LoadTeacherAsync();
+    }
+
+    /// <summary>Назад к расписанию группы. Расписание преподавателя удаляется из памяти.</summary>
+    public void ExitTeacherMode()
+    {
+        if (_teacher == null) return;
+        _teacher = null;
+        _teacherDays.Clear();
+        _teacherLoading = false;
+        _error = _savedError;
+        _savedError = "";
+        RaiseModeChanged();
+    }
+
+    async Task LoadTeacherAsync()
+    {
+        var name = _teacher;
+        if (name == null) return;
+        _teacherLoading = true;
+        IsRefreshing = true;
+        BuildItems();            // покажет "Загружаем…"
+        try
+        {
+            var days = await ScheduleService.FetchTeacherAsync(name);
+            if (_teacher != name) return;               // успели выйти или выбрать другого
+            _teacherDays.Clear();
+            foreach (var d in days) _teacherDays[d.Date.Date] = d;
+            _error = "";
+        }
+        catch (InvalidDataException ex)
+        {
+            if (_teacher != name) return;
+            _error = "Не удалось разобрать страницу преподавателя: " + ex.Message;
+        }
+        catch (Exception)
+        {
+            if (_teacher != name) return;
+            _error = "Нет связи с сайтом — расписание преподавателя не загружено";
+        }
+        finally
+        {
+            if (_teacher == name) _teacherLoading = false;
+            IsRefreshing = false;
+        }
+        RaiseModeChanged();
+    }
+
+    void RaiseModeChanged()
+    {
+        Raise(nameof(IsTeacherMode)); Raise(nameof(IsGroupMode)); Raise(nameof(BackText));
+        Raise(nameof(SubTitle)); Raise(nameof(ErrorText)); Raise(nameof(HasError));
         BuildWeek();
         BuildItems();
         UpdateStates();
@@ -187,15 +275,19 @@ public class MainViewModel : ObservableBase
     {
         Items.Clear();
 
-        if (!_days.TryGetValue(_selected, out var day))
+        if (!Active.TryGetValue(_selected, out var day))
         {
-            EmptyText = "Нет данных на эту дату.\nПотяните вниз, чтобы обновить.";
+            EmptyText = _teacher == null
+                ? "Нет данных на эту дату.\nПотяните вниз, чтобы обновить."
+                : _teacherLoading ? "Загружаем расписание преподавателя…"
+                : _error.Length > 0 ? "Расписание преподавателя недоступно.\nПотяните вниз, чтобы повторить."
+                : "У преподавателя нет данных на эту дату.";
             return;
         }
 
         var bells = Bells.For(_selected.DayOfWeek, _shortBells);
         var rows = day.Pairs.OrderBy(p => p.Number)
-            .Select(p => (p.Number, Entries: FilterBySubgroup(p.Entries)))
+            .Select(p => (p.Number, Entries: _teacher != null ? p.Entries : FilterBySubgroup(p.Entries)))
             .ToList();
 
         int first = rows.FindIndex(r => r.Entries.Count > 0);
@@ -211,7 +303,7 @@ public class MainViewModel : ObservableBase
             var (number, entries) = rows[i];
             var slot = bells.FirstOrDefault(b => b.Number == number);
             bool isWindow = entries.Count == 0;
-            var vms = entries.Select(e => EntryVm.From(e, showSubgroup: _subgroupIndex == 0)).ToList();
+            var vms = entries.Select(e => EntryVm.From(e, showSubgroup: _teacher != null || _subgroupIndex == 0, teacherMode: _teacher != null)).ToList();
             Items.Add(new PairItem(_selected, number, slot, vms, isWindow));
         }
     }

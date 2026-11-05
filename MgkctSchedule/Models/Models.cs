@@ -8,6 +8,8 @@ public class LessonEntry
     public string Type { get; set; } = "";      // Лек, ЛР, Пр-ка ...
     public string Teacher { get; set; } = "";
     public string Room { get; set; } = "";
+    /// <summary>Только на страницах преподавателей: группа, у которой проходит занятие.</summary>
+    public string Group { get; set; } = "";
 }
 
 /// <summary>Строка таблицы: номер пары + занятия (пусто = нет пары).</summary>

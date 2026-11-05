@@ -8,7 +8,6 @@ public class SettingsViewModel : ObservableBase
     string _status = "";
 
     public string[] Groups => ScheduleService.AvailableGroups;
-    public string[] SubgroupOptions { get; } = { "Все подгруппы", "1 подгруппа", "2 подгруппа" };
     public ICommand TestNotificationCommand { get; }
 
     public SettingsViewModel()
@@ -32,18 +31,6 @@ public class SettingsViewModel : ObservableBase
             Raise();
             Raise(nameof(AboutText));
             AppSettings.RaiseChanged();   // главный экран загрузит расписание новой группы
-        }
-    }
-
-    public int SubgroupIndex
-    {
-        get => AppSettings.Subgroup;
-        set
-        {
-            if (value < 0 || value == AppSettings.Subgroup) return;
-            AppSettings.Subgroup = value;
-            Raise();
-            AppSettings.RaiseChanged();
         }
     }
 

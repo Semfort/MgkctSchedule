@@ -1,3 +1,4 @@
+using MgkctSchedule.Services;
 using MgkctSchedule.ViewModels;
 
 namespace MgkctSchedule;
@@ -55,6 +56,59 @@ public partial class MainPage : ContentPage
 
     async void OnSettingsClicked(object? sender, EventArgs e) =>
         await Navigation.PushAsync(new SettingsPage());
+
+    // ---------- преподаватели ----------
+
+    async void OnTeacherTapped(object? sender, TappedEventArgs e)
+    {
+        if (sender is BindableObject b && b.BindingContext is TeacherLink t)
+            await _vm.OpenTeacherAsync(t.Name);
+    }
+
+    void OnBackToGroupTapped(object? sender, TappedEventArgs e) => _vm.ExitTeacherMode();
+
+    /// <summary>Кнопка "назад" на телефоне: из режима преподавателя к группе, а не из приложения.</summary>
+    protected override bool OnBackButtonPressed()
+    {
+        if (_vm.IsTeacherMode) { _vm.ExitTeacherMode(); return true; }
+        return base.OnBackButtonPressed();
+    }
+
+    // ---------- подгруппа ----------
+
+    bool _switchingSubgroup;
+
+    /// <summary>Все -> Первая -> Вторая -> Все. Подпись и список "пролистываются" влево.</summary>
+    async void OnSubgroupTapped(object? sender, TappedEventArgs e)
+    {
+        if (_switchingSubgroup) return;
+        _switchingSubgroup = true;
+        try
+        {
+            await Task.WhenAll(
+                SubgroupLabel.TranslateTo(-28, 0, 110, Easing.CubicIn),
+                SubgroupLabel.FadeTo(0, 110),
+                ListHost.TranslateTo(-48, 0, 110, Easing.CubicIn),
+                ListHost.FadeTo(0, 110));
+
+            AppSettings.Subgroup = (AppSettings.Subgroup + 1) % 3;
+            AppSettings.RaiseChanged();   // обновит подпись, список, виджет и уведомление
+
+            SubgroupLabel.TranslationX = 28;
+            ListHost.TranslationX = 48;
+            await Task.WhenAll(
+                SubgroupLabel.TranslateTo(0, 0, 160, Easing.CubicOut),
+                SubgroupLabel.FadeTo(1, 160),
+                ListHost.TranslateTo(0, 0, 180, Easing.CubicOut),
+                ListHost.FadeTo(1, 180));
+        }
+        finally
+        {
+            SubgroupLabel.TranslationX = 0; SubgroupLabel.Opacity = 1;
+            ListHost.TranslationX = 0; ListHost.Opacity = 1;
+            _switchingSubgroup = false;
+        }
+    }
 
     // ---------- дни ----------
 

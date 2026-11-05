@@ -45,14 +45,21 @@ public class DayChip
     public double ChipOpacity => HasData || IsSelected ? 1.0 : 0.45;
 }
 
+public class TeacherLink
+{
+    public string Name { get; init; } = "";
+}
+
 /// <summary>Одно занятие в карточке.</summary>
 public class EntryVm
 {
     public string Subject { get; init; } = "";
     public string TypeLine { get; init; } = "";
-    public string Teacher { get; init; } = "";
+    public List<TeacherLink> Teachers { get; init; } = new();
+    public string InfoLine { get; init; } = "";
     public string Room { get; init; } = "";
-    public bool HasTeacher => Teacher.Length > 0;
+    public bool HasTeachers => Teachers.Count > 0;
+    public bool HasInfo => InfoLine.Length > 0;
     public bool HasRoom => Room.Length > 0;
     public Color TitleColor => Palette.Title;
     public Color SubColor => Palette.Sub;
@@ -68,7 +75,7 @@ public class EntryVm
         _ => t
     };
 
-    public static EntryVm From(LessonEntry e, bool showSubgroup)
+    public static EntryVm From(LessonEntry e, bool showSubgroup, bool teacherMode = false)
     {
         var parts = new List<string>();
         if (e.Type.Length > 0) parts.Add(TypeName(e.Type));
@@ -77,7 +84,12 @@ public class EntryVm
         {
             Subject = e.Subject,
             TypeLine = string.Join(" · ", parts),
-            Teacher = e.Teacher,
+            // в расписании группы - кликабельные преподаватели, в расписании преподавателя - группа
+            Teachers = teacherMode
+                ? new List<TeacherLink>()
+                : e.Teacher.Split(", ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(t => new TeacherLink { Name = t }).ToList(),
+            InfoLine = teacherMode && e.Group.Length > 0 ? $"Группа {e.Group}" : "",
             Room = e.Room
         };
     }

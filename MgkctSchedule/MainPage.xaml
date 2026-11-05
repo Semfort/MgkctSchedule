@@ -11,25 +11,60 @@
         <!-- ======== основной экран ======== -->
         <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
 
-            <!-- заголовок -->
-            <Grid Grid.Row="0" Padding="16,14,16,2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                <VerticalStackLayout VerticalOptions="Center">
-                    <Label Text="{Binding DateTitle}" FontSize="22" FontAttributes="Bold"
+            <!-- заголовок: слева дата, справа кнопки, а прямо под ними подгруппа -->
+            <Grid Grid.Row="0" Padding="16,6,16,0" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <VerticalStackLayout VerticalOptions="Start">
+                    <Label Text="{Binding DateTitle}" FontSize="20" FontAttributes="Bold"
                            TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
                     <Label Text="{Binding SubTitle}" FontSize="12"
                            TextColor="{AppThemeBinding Light=#5B6472, Dark=#9AA3B2}"/>
                 </VerticalStackLayout>
-                <Button Grid.Column="1" Text="Сегодня" Command="{Binding TodayCommand}"
-                        HeightRequest="40" Padding="14,0" CornerRadius="20" FontSize="13"
-                        BackgroundColor="{AppThemeBinding Light=#E6EAF2, Dark=#1B1E25}"
-                        TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
-                <Button Grid.Column="2" Text="📅" Clicked="OnCalendarClicked"
-                        WidthRequest="44" HeightRequest="40" Padding="0" CornerRadius="20" FontSize="18"
-                        BackgroundColor="{AppThemeBinding Light=#E6EAF2, Dark=#1B1E25}"/>
-                <Button Grid.Column="3" Text="⚙" Clicked="OnSettingsClicked"
-                        WidthRequest="44" HeightRequest="40" Padding="0" CornerRadius="20" FontSize="18"
-                        BackgroundColor="{AppThemeBinding Light=#E6EAF2, Dark=#1B1E25}"
-                        TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
+
+                <VerticalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Start">
+                    <HorizontalStackLayout Spacing="8" HorizontalOptions="End">
+                        <Button Text="Сегодня" Command="{Binding TodayCommand}"
+                                HeightRequest="40" Padding="14,0" CornerRadius="20" FontSize="13"
+                                BackgroundColor="{AppThemeBinding Light=#E6EAF2, Dark=#1B1E25}"
+                                TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
+                        <Button Text="📅" Clicked="OnCalendarClicked"
+                                WidthRequest="44" HeightRequest="40" Padding="0" CornerRadius="20" FontSize="18"
+                                BackgroundColor="{AppThemeBinding Light=#E6EAF2, Dark=#1B1E25}"/>
+                        <Button Text="⚙" Clicked="OnSettingsClicked"
+                                WidthRequest="44" HeightRequest="40" Padding="0" CornerRadius="20" FontSize="18"
+                                BackgroundColor="{AppThemeBinding Light=#E6EAF2, Dark=#1B1E25}"
+                                TextColor="{AppThemeBinding Light=#14171C, Dark=#F1F3F7}"/>
+                    </HorizontalStackLayout>
+
+                    <!-- подгруппа: одно нажатие переключает Все -> Первая -> Вторая -->
+                    <Border IsVisible="{Binding IsGroupMode}" HorizontalOptions="End" HeightRequest="36" Padding="14,0" StrokeThickness="0"
+                            BackgroundColor="{AppThemeBinding Light=#E6EAF2, Dark=#1B1E25}">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="18"/></Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnSubgroupTapped"/>
+                        </Border.GestureRecognizers>
+                        <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                            <Label Text="Подгруппа:" FontSize="14" VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#5B6472, Dark=#9AA3B2}"/>
+                            <Label x:Name="SubgroupLabel" Text="{Binding SubgroupLabel}" FontSize="14"
+                                   FontAttributes="Bold" VerticalOptions="Center" MinimumWidthRequest="52"
+                                   TextColor="{AppThemeBinding Light=#2F6BFF, Dark=#6B96FF}"/>
+                            <Label Text="›" FontSize="16" VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#5B6472, Dark=#9AA3B2}"/>
+                        </HorizontalStackLayout>
+                    </Border>
+
+                    <!-- режим преподавателя: вернуться к расписанию группы -->
+                    <Border IsVisible="{Binding IsTeacherMode}" HorizontalOptions="End" HeightRequest="36"
+                            Padding="14,0" StrokeThickness="0"
+                            BackgroundColor="{AppThemeBinding Light=#2F6BFF, Dark=#4C7DFF}">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="18"/></Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnBackToGroupTapped"/>
+                        </Border.GestureRecognizers>
+                        <Label Text="{Binding BackText}" FontSize="14" FontAttributes="Bold"
+                               VerticalOptions="Center" TextColor="White"/>
+                    </Border>
+                </VerticalStackLayout>
             </Grid>
 
             <!-- полоса дней -->
@@ -83,7 +118,7 @@
                    TextColor="{AppThemeBinding Light=#B45309, Dark=#FBBF24}"/>
 
             <!-- список пар -->
-            <Grid Grid.Row="5" Margin="0,6,0,0">
+            <Grid x:Name="ListHost" Grid.Row="5" Margin="0,6,0,0">
                 <Grid.GestureRecognizers>
                     <SwipeGestureRecognizer Direction="Left" Swiped="OnSwipeLeft"/>
                     <SwipeGestureRecognizer Direction="Right" Swiped="OnSwipeRight"/>
@@ -135,10 +170,24 @@
                                                                 <Label Text="{Binding TypeLine}" FontSize="13"
                                                                        TextColor="{Binding SubColor}"/>
                                                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                                    <Label Text="{Binding Teacher}" FontSize="13"
-                                                                           VerticalOptions="Center"
-                                                                           IsVisible="{Binding HasTeacher}"
-                                                                           TextColor="{Binding SubColor}"/>
+                                                                    <VerticalStackLayout VerticalOptions="Center" Spacing="2">
+                                                                        <FlexLayout Wrap="Wrap" IsVisible="{Binding HasTeachers}"
+                                                                                    BindableLayout.ItemsSource="{Binding Teachers}">
+                                                                            <BindableLayout.ItemTemplate>
+                                                                                <DataTemplate x:DataType="vm:TeacherLink">
+                                                                                    <Label Text="{Binding Name}" FontSize="13" Margin="0,0,10,0"
+                                                                                           TextDecorations="Underline"
+                                                                                           TextColor="{AppThemeBinding Light=#2F6BFF, Dark=#6B96FF}">
+                                                                                        <Label.GestureRecognizers>
+                                                                                            <TapGestureRecognizer Tapped="OnTeacherTapped"/>
+                                                                                        </Label.GestureRecognizers>
+                                                                                    </Label>
+                                                                                </DataTemplate>
+                                                                            </BindableLayout.ItemTemplate>
+                                                                        </FlexLayout>
+                                                                        <Label Text="{Binding InfoLine}" FontSize="13" IsVisible="{Binding HasInfo}"
+                                                                               FontAttributes="Bold" TextColor="{Binding SubColor}"/>
+                                                                    </VerticalStackLayout>
                                                                     <Border Grid.Column="1" StrokeThickness="0"
                                                                             Padding="10,4"
                                                                             IsVisible="{Binding HasRoom}"

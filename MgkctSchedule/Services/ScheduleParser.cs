@@ -18,12 +18,20 @@ public static class ScheduleParser
     /// На странице у группы может быть несколько блоков (текущая и следующая неделя):
     /// каждый - свой заголовок "Группа - N", дата-диапазон и таблица. Берём все.
     /// </summary>
-    public static List<DaySchedule> ParseGroup(string html, string group)
+    public static List<DaySchedule> ParseGroup(string html, string group) =>
+        ParseBlocks(html, new Regex($@"^Группа\s*-\s*{Regex.Escape(group)}$", RegexOptions.IgnoreCase),
+                    teacherPage: false, what: $"группа {group}");
+
+    /// <summary>Страница преподавателя: заголовок "Преподаватель - Фамилия И. О.".</summary>
+    public static List<DaySchedule> ParseTeacher(string html, string teacher) =>
+        ParseBlocks(html, new Regex($@"^Преподаватель\s*-\s*{Regex.Escape(teacher)}$", RegexOptions.IgnoreCase),
+                    teacherPage: true, what: $"преподаватель {teacher}");
+
+    static List<DaySchedule> ParseBlocks(string html, Regex headingRx, bool teacherPage, string what)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
 
-        var headingRx = new Regex($@"^Группа\s*-\s*{Regex.Escape(group)}$", RegexOptions.IgnoreCase);
         var result = new List<DaySchedule>();
         bool found = false, want = false;
 
@@ -36,19 +44,19 @@ public static class ScheduleParser
             }
             else if (want && n.Name == "table")
             {
-                result.AddRange(ParseTable(n));
+                result.AddRange(ParseTable(n, teacherPage));
                 want = false;
             }
         }
 
         if (!found)
-            throw new InvalidDataException($"На странице не найдена группа {group}");
+            throw new InvalidDataException($"На странице не найден: {what}");
         if (result.Count == 0)
-            throw new InvalidDataException($"Для группы {group} нет таблицы расписания");
+            throw new InvalidDataException($"Нет таблицы расписания: {what}");
         return result;
     }
 
-    static List<DaySchedule> ParseTable(HtmlNode table)
+    static List<DaySchedule> ParseTable(HtmlNode table, bool teacherPage)
     {
         var dates = new List<DateTime>();
         var days = new List<DaySchedule>();
@@ -78,11 +86,25 @@ public static class ScheduleParser
 
             for (int i = 0; i < dates.Count; i++)
             {
-                var entries = ParseCell(Lines(tds[i * 2]), Lines(tds[i * 2 + 1]));
+                var lessonLines = Lines(tds[i * 2]);
+                if (teacherPage) lessonLines.RemoveAll(l => l == "-");   // у преподавателей пустая ячейка - "-"
+                var entries = ParseCell(lessonLines, Lines(tds[i * 2 + 1]));
+                if (teacherPage) foreach (var e in entries) SplitGroup(e);
                 days[i].Pairs.Add(new PairSlot { Number = number, Entries = entries });
             }
         }
         return days;
+    }
+
+    static readonly Regex GroupPrefixRx = new(@"^(\d+\*?)\s*-\s*(.+)$", RegexOptions.Compiled);
+
+    /// <summary>"89-ПСС internet" -> группа 89, дисциплина "ПСС internet".</summary>
+    static void SplitGroup(LessonEntry e)
+    {
+        var m = GroupPrefixRx.Match(e.Subject);
+        if (!m.Success) return;
+        e.Group = m.Groups[1].Value;
+        e.Subject = m.Groups[2].Value.Trim();
     }
 
     static string Clean(string s) =>
