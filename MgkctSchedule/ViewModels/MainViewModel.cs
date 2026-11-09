@@ -48,7 +48,13 @@ public class MainViewModel : ObservableBase
     {
         RefreshCommand = new Command(async () => await RefreshAsync());
         TodayCommand = new Command(() => SelectDate(DateTime.Today));
-        PrevDayCommand = new Command(() => SelectDate(_selected.AddDays(-1)));
+        PrevDayCommand = new Command(() =>
+        {
+            // воскресенья в расписании нет: из понедельника идём в прошлую субботу
+            var d = _selected.AddDays(-1);
+            if (d.DayOfWeek == DayOfWeek.Sunday) d = d.AddDays(-1);
+            SelectDate(d);
+        });
         NextDayCommand = new Command(() => SelectDate(_selected.AddDays(1)));
         PrevWeekCommand = new Command(() => SelectDate(_selected.AddDays(-7)));
         NextWeekCommand = new Command(() => SelectDate(_selected.AddDays(7)));

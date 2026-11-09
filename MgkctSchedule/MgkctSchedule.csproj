@@ -21,7 +21,8 @@
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-		<ApplicationVersion>8</ApplicationVersion>
+		<ApplicationVersion>10</ApplicationVersion>
+		<!--dotnet publish -f net10.0-android -c Release-->
 
 		<!-- Оставляем минимальную версию только для Android -->
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">26.0</SupportedOSPlatformVersion>

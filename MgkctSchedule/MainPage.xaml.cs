@@ -26,6 +26,7 @@ public partial class MainPage : ContentPage
 
         if (Application.Current != null)
             Application.Current.RequestedThemeChanged += OnThemeChanged;
+        SwipeBridge.Swiped += OnSwipe;
 
         // раз в 20 секунд пересчитываем, какая пара идёт
         if (_timer == null)
@@ -50,6 +51,7 @@ public partial class MainPage : ContentPage
         _timer?.Stop();
         if (Application.Current != null)
             Application.Current.RequestedThemeChanged -= OnThemeChanged;
+        SwipeBridge.Swiped -= OnSwipe;
     }
 
     void OnThemeChanged(object? sender, AppThemeChangedEventArgs e) => _vm.RebuildForTheme();
@@ -118,8 +120,45 @@ public partial class MainPage : ContentPage
             _vm.SelectDate(chip.Date);
     }
 
-    void OnSwipeLeft(object? sender, SwipedEventArgs e) => _vm.NextDayCommand.Execute(null);
-    void OnSwipeRight(object? sender, SwipedEventArgs e) => _vm.PrevDayCommand.Execute(null);
+    // Старые обработчики из XAML оставлены пустыми: свайп ловится на уровне Activity (SwipeDetector),
+    // потому что вертикально прокручиваемый список перехватывает касания у SwipeGestureRecognizer.
+    void OnSwipeLeft(object? sender, SwipedEventArgs e) { }
+    void OnSwipeRight(object? sender, SwipedEventArgs e) { }
+
+    bool _daySwitching;
+
+    /// <param name="dir">1 = палец влево (следующий день), -1 = вправо (предыдущий).</param>
+    void OnSwipe(int dir)
+    {
+        if (CalendarOverlay.IsVisible) return;
+        _ = ChangeDayAnimatedAsync(dir);
+    }
+
+    async Task ChangeDayAnimatedAsync(int dir)
+    {
+        if (_daySwitching || _switchingSubgroup) return;
+        _daySwitching = true;
+        try
+        {
+            await Task.WhenAll(
+                ListHost.TranslateTo(-48 * dir, 0, 100, Easing.CubicIn),
+                ListHost.FadeTo(0, 100));
+
+            if (dir > 0) _vm.NextDayCommand.Execute(null);
+            else _vm.PrevDayCommand.Execute(null);
+
+            ListHost.TranslationX = 48 * dir;
+            await Task.WhenAll(
+                ListHost.TranslateTo(0, 0, 160, Easing.CubicOut),
+                ListHost.FadeTo(1, 160));
+        }
+        finally
+        {
+            ListHost.TranslationX = 0;
+            ListHost.Opacity = 1;
+            _daySwitching = false;
+        }
+    }
 
     // ---------- календарик ----------
 
